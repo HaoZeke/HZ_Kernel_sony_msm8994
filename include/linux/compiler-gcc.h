@@ -6,8 +6,8 @@
  * Common definitions for all gcc versions go here.
  */
 #define GCC_VERSION (__GNUC__ * 10000 \
-		   + __GNUC_MINOR__ * 100 \
-		   + __GNUC_PATCHLEVEL__)
+           + __GNUC_MINOR__ * 100 \
+           + __GNUC_PATCHLEVEL__)
 
 
 /* Optimization barrier */
@@ -32,9 +32,9 @@
  * the inline assembly constraint from =g to =r, in this particular
  * case either is valid.
  */
-#define RELOC_HIDE(ptr, off)					\
-  ({ unsigned long __ptr;					\
-    __asm__ ("" : "=r"(__ptr) : "0"(ptr));		\
+#define RELOC_HIDE(ptr, off)                    \
+  ({ unsigned long __ptr;                   \
+    __asm__ ("" : "=r"(__ptr) : "0"(ptr));      \
     (typeof(ptr)) (__ptr + (off)); })
 
 /* Make the optimizer believe the variable can be manipulated arbitrarily. */
@@ -53,19 +53,19 @@
  */
 #if !defined(CONFIG_ARCH_SUPPORTS_OPTIMIZED_INLINING) || \
     !defined(CONFIG_OPTIMIZE_INLINING) || (__GNUC__ < 4)
-# define inline		inline		__attribute__((always_inline)) notrace
-# define __inline__	__inline__	__attribute__((always_inline)) notrace
-# define __inline	__inline	__attribute__((always_inline)) notrace
+# define inline     inline      __attribute__((always_inline)) notrace
+# define __inline__ __inline__  __attribute__((always_inline)) notrace
+# define __inline   __inline    __attribute__((always_inline)) notrace
 #else
 /* A lot of inline functions can cause havoc with function tracing */
-# define inline		inline		notrace
-# define __inline__	__inline__	notrace
-# define __inline	__inline	notrace
+# define inline     inline      notrace
+# define __inline__ __inline__  notrace
+# define __inline   __inline    notrace
 #endif
 
-#define __deprecated			__attribute__((deprecated))
-#define __packed			__attribute__((packed))
-#define __weak				__attribute__((weak))
+#define __deprecated            __attribute__((deprecated))
+#define __packed            __attribute__((packed))
+#define __weak              __attribute__((weak))
 
 /*
  * it doesn't make sense on ARM (currently the only user of __naked) to trace
@@ -77,9 +77,9 @@
  * therefore they must be noinline and noclone.  GCC 4.[56] currently fail to enforce
  * this, so we must do so ourselves.  See GCC PR44290.
  */
-#define __naked				__attribute__((naked)) noinline __noclone notrace
+#define __naked             __attribute__((naked)) noinline __noclone notrace
 
-#define __noreturn			__attribute__((noreturn))
+#define __noreturn          __attribute__((noreturn))
 
 /*
  * From the GCC manual:
@@ -91,22 +91,138 @@
  * would be.
  * [...]
  */
-#define __pure				__attribute__((pure))
-#define __aligned(x)			__attribute__((aligned(x)))
-#define __printf(a, b)			__attribute__((format(printf, a, b)))
-#define __scanf(a, b)			__attribute__((format(scanf, a, b)))
-#define  noinline			__attribute__((noinline))
-#define __attribute_const__		__attribute__((__const__))
-#define __maybe_unused			__attribute__((unused))
-#define __always_unused			__attribute__((unused))
+#define __pure              __attribute__((pure))
+#define __aligned(x)            __attribute__((aligned(x)))
+#define __printf(a, b)          __attribute__((format(printf, a, b)))
+#define __scanf(a, b)           __attribute__((format(scanf, a, b)))
+#define  noinline           __attribute__((noinline))
+#define __attribute_const__     __attribute__((__const__))
+#define __maybe_unused          __attribute__((unused))
+#define __always_unused         __attribute__((unused))
 
-#define __gcc_header(x) #x
-#define _gcc_header(x) __gcc_header(linux/compiler-gcc##x.h)
-#define gcc_header(x) _gcc_header(x)
-#include gcc_header(__GNUC__)
+/* gcc version specific checks */
+
+#if GCC_VERSION < 30200
+# error Sorry, your compiler is too old - please upgrade it.
+#endif
+
+#if GCC_VERSION < 30300
+# define __used         __attribute__((__unused__))
+#else
+# define __used         __attribute__((__used__))
+#endif
+
+#ifdef CONFIG_GCOV_KERNEL
+# if GCC_VERSION < 30400
+#   error "GCOV profiling support for gcc versions below 3.4 not included"
+# endif /* __GNUC_MINOR__ */
+#endif /* CONFIG_GCOV_KERNEL */
+
+#if GCC_VERSION >= 30400
+#define __must_check        __attribute__((warn_unused_result))
+#endif
+
+#if GCC_VERSION >= 40000
+
+/* GCC 4.1.[01] miscompiles __weak */
+#ifdef __KERNEL__
+# if GCC_VERSION >= 40100 &&  GCC_VERSION <= 40101
+#  error Your version of gcc miscompiles the __weak directive
+# endif
+#endif
+
+#define __used          __attribute__((__used__))
+#define __compiler_offsetof(a, b)                   \
+    __builtin_offsetof(a, b)
+
+#if GCC_VERSION >= 40100 && GCC_VERSION < 40600
+# define __compiletime_object_size(obj) __builtin_object_size(obj, 0)
+#endif
+
+#if GCC_VERSION >= 40300
+/* Mark functions as cold. gcc will assume any path leading to a call
+ * to them will be unlikely.  This means a lot of manual unlikely()s
+ * are unnecessary now for any paths leading to the usual suspects
+ * like BUG(), printk(), panic() etc. [but let's keep them for now for
+ * older compilers]
+ *
+ * Early snapshots of gcc 4.3 don't support this and we can't detect this
+ * in the preprocessor, but we can live with this because they're unreleased.
+ * Maketime probing would be overkill here.
+ *
+ * gcc also has a __attribute__((__hot__)) to move hot functions into
+ * a special section, but I don't see any sense in this right now in
+ * the kernel context
+ */
+#define __cold          __attribute__((__cold__))
+
+#define __UNIQUE_ID(prefix) __PASTE(__PASTE(__UNIQUE_ID_, prefix), __COUNTER__)
+
+#ifndef __CHECKER__
+# define __compiletime_warning(message) __attribute__((warning(message)))
+# define __compiletime_error(message) __attribute__((error(message)))
+#endif /* __CHECKER__ */
+#endif /* GCC_VERSION >= 40300 */
+
+#if GCC_VERSION >= 40500
+/*
+ * Mark a position in code as unreachable.  This can be used to
+ * suppress control flow warnings after asm blocks that transfer
+ * control elsewhere.
+ *
+ * Early snapshots of gcc 4.5 don't support this and we can't detect
+ * this in the preprocessor, but we can live with this because they're
+ * unreleased.  Really, we need to have autoconf for the kernel.
+ */
+#define unreachable() __builtin_unreachable()
+
+/* Mark a function definition as prohibited from being cloned. */
+#define __noclone   __attribute__((__noclone__))
+
+#endif /* GCC_VERSION >= 40500 */
+
+#if GCC_VERSION >= 40600
+/*
+ * Tell the optimizer that something else uses this function or variable.
+ */
+#define __visible   __attribute__((externally_visible))
+#endif
+
+/*
+ * GCC 'asm goto' miscompiles certain code sequences:
+ *
+ *   http://gcc.gnu.org/bugzilla/show_bug.cgi?id=58670
+ *
+ * Work it around via a compiler barrier quirk suggested by Jakub Jelinek.
+ *
+ * (asm goto is automatically volatile - the naming reflects this.)
+ */
+#define asm_volatile_goto(x...) do { asm goto(x); asm (""); } while (0)
+
+#ifdef CONFIG_ARCH_USE_BUILTIN_BSWAP
+#if GCC_VERSION >= 40400
+#define __HAVE_BUILTIN_BSWAP32__
+#define __HAVE_BUILTIN_BSWAP64__
+#endif
+#if GCC_VERSION >= 40800 || (defined(__powerpc__) && GCC_VERSION >= 40600)
+#define __HAVE_BUILTIN_BSWAP16__
+#endif
+#endif /* CONFIG_ARCH_USE_BUILTIN_BSWAP */
+
+#if GCC_VERSION >= 70000
+#define KASAN_ABI_VERSION 6
+#elif GCC_VERSION >= 60000
+#define KASAN_ABI_VERSION 5
+#elif GCC_VERSION >= 50000
+#define KASAN_ABI_VERSION 4
+#elif GCC_VERSION >= 40902
+#define KASAN_ABI_VERSION 3
+#endif
+
+#endif  /* gcc version >= 40000 specific checks */
 
 #if !defined(__noclone)
-#define __noclone	/* not needed */
+#define __noclone   /* not needed */
 #endif
 
 /*
@@ -115,4 +231,4 @@
  */
 #define uninitialized_var(x) x = x
 
-#define __always_inline		inline __attribute__((always_inline))
+#define __always_inline     inline __attribute__((always_inline))
