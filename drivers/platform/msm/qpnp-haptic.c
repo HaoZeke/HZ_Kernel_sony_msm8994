@@ -1515,6 +1515,7 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 		} else {
 			rc = qpnp_hap_play(hap, on);
 			if (rc < 0)
+				mutex_unlock(&hap->set_lock);
 				return rc;
 
 			if (hap->correct_lra_drive_freq) {
@@ -1532,14 +1533,18 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 		}
 	}
 
+	mutex_unlock(&hap->set_lock);
 	return rc;
 }
 
+/* enable interface from timed output class */
 /* enable interface from timed output class */
 static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 {
 	struct qpnp_hap *hap = container_of(dev, struct qpnp_hap,
 					 timed_dev);
+	int rc = 0;
+	flush_work(&hap->work);
 
 	mutex_lock(&hap->lock);
 	hrtimer_cancel(&hap->hap_timer);
@@ -1551,6 +1556,26 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 		}
 		hap->state = 0;
 	} else {
+
+		if (hap->vmax_mv_haptic == QPNP_HAP_VMAX_MIN_MV) {
+			mutex_unlock(&hap->lock);
+			return;
+		}
+
+		if (value >= CALL_ALARM_TIME_THRESHOLD
+				&& hap->vmax_mv_ind > 0
+				&& hap->vmax_mv != hap->vmax_mv_ind){
+			hap->vmax_mv = hap->vmax_mv_ind;
+			rc = qpnp_hap_vmax_config(hap);
+		}
+		if (value < CALL_ALARM_TIME_THRESHOLD
+				&& hap->vmax_mv != hap->vmax_mv_haptic) {
+			hap->vmax_mv = hap->vmax_mv_haptic;
+			rc = qpnp_hap_vmax_config(hap);
+		}
+		if (rc)
+			pr_err("Haptics dynamic vmax modification failed\n");
+
 		value = (value > hap->timeout_ms ?
 				 hap->timeout_ms : value);
 		hap->state = 1;
@@ -1559,7 +1584,11 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 			      HRTIMER_MODE_REL);
 	}
 	mutex_unlock(&hap->lock);
-	schedule_work(&hap->work);
+
+	if (hap->play_mode == QPNP_HAP_DIRECT)
+		qpnp_hap_set(hap, hap->state);
+	else
+		schedule_work(&hap->work);
 }
 
 void set_vibrate(int value)
