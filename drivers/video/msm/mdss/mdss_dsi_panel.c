@@ -22,7 +22,6 @@
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 #include <linux/string.h>
-
 #include <linux/display_state.h>
 #include "mdss_dsi.h"
 
@@ -669,6 +668,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 #ifdef CONFIG_POWERSUSPEND
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
 #endif
+	display_on = true;
 
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
