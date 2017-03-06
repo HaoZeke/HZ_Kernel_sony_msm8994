@@ -45,6 +45,9 @@
 /* Globals */
 static int zram_major;
 static struct zram *zram_devices;
+#ifdef CONFIG_CRYPTO_LZ4
+static const char *default_compressor = "lz4";
+#else
 static const char *default_compressor = "lzo";
 #define BACKEND_PARAM_BUF_SIZE	32
 static char backend_param_buf[BACKEND_PARAM_BUF_SIZE];
