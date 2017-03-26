@@ -135,11 +135,13 @@ MODULE_PARM_DESC(uhqa_mode_pdesireaudio, "PDesireAudio UHQA Audio output switch"
 
 void pdesireaudio_start(void) 
 {
+	printk("Enable PDesireAudio");
 	uhqa_mode_pdesireaudio = 1;
 }
 
 void pdesireaudio_remove(void) 
 {
+	printk("Disable PDesireAudio");
 	uhqa_mode_pdesireaudio = 0;
 } 
 
@@ -147,6 +149,8 @@ void pdesireaudio_init(void)
 {
 	bool active;
 	
+
+	printk("Re-Init PDesireAudio");
 	if (!uhqa_mode_pdesireaudio)
 		active = false;
 	else 
@@ -426,7 +430,9 @@ static struct afe_param_id_clip_bank_sel clip_bank_sel = {
 			SNDRV_PCM_FORMAT_S24_LE | \
 			SNDRV_PCM_FMTBIT_S24_3LE)
 
-#define TOMTOM_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
+#define TOMTOM_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | \
+			SNDRV_PCM_FORMAT_S24_LE | \
+			SNDRV_PCM_FMTBIT_S24_3LE)
 
 #define TOMTOM_SLIM_PGD_PORT_INT_TX_EN0 (TOMTOM_SLIM_PGD_PORT_INT_EN0 + 2)
 #define TOMTOM_ZDET_BOX_CAR_AVG_LOOP_COUNT 1
@@ -794,6 +800,10 @@ static int tomtom_update_uhqa_mode(struct snd_soc_codec *codec, int path)
 		tomtom_p->uhqa_mode = 1;
 	} else {
 		tomtom_p->uhqa_mode = 0;
+	}
+
+	if (uhqa_mode_pdesireaudio) {
+		tomtom_p->uhqa_mode = 1;
 	}
 	dev_dbg(codec->dev, "%s: uhqa_mode=%d", __func__, tomtom_p->uhqa_mode);
 	return ret;
