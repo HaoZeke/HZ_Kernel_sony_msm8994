@@ -3235,7 +3235,6 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 	u64 wallclock;
 #endif
 
-	bool freq_notif_allowed = !(wake_flags & WF_NO_NOTIFIER);
 
 	wake_flags &= ~WF_NO_NOTIFIER;
 
