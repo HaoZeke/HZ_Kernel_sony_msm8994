@@ -264,7 +264,6 @@ static struct kobject *sched_features_kobj;
 static int __init ksysfs_init(void)
 {
 	int error;
-	int retval;
 
 	kernel_kobj = kobject_create_and_add("kernel", NULL);
 	if (!kernel_kobj) {
