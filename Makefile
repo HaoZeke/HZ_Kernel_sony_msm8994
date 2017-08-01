@@ -242,8 +242,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -std=gnu89
-HOSTCXXFLAGS = -O3
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
+HOSTCXXFLAGS = -O2
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -352,10 +352,11 @@ GEN_OPT_FLAGS := $(call cc-option,$(ARM_ARCH_OPT),-march=armv8-a+crypto) \
  -fmodulo-sched-allow-regmoves \
  -fivopts
 
-ABYSS_FLAGS 	:= $(GEN_OPT_FLAGS) -O3 -pipe \
+HZ_FLAGS 	:= $(GEN_OPT_FLAGS) -O2 -pipe \
 		   -ffast-math -fsingle-precision-constant -fsched-spec-load \
 		   -fpredictive-commoning -fgcse-after-reload -fgcse-sm \
-		   -fno-pic -mno-android
+		   -funswitch-loops -fno-aggressive-loop-optimizations \
+		   -fno-pic -mno-android -mcpu=cortex-a57 -mtune=cortex-a57
 
 # Use the wrapper for the compiler.  This wrapper scans for new
 # warnings and causes the build to stop upon encountering them.
@@ -363,11 +364,11 @@ ABYSS_FLAGS 	:= $(GEN_OPT_FLAGS) -O3 -pipe \
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-CFLAGS_MODULE   = -DMODULE $(ABYSS_FLAGS)
-AFLAGS_MODULE   = -DMODULE $(ABYSS_FLAGS)
+CFLAGS_MODULE   = -DMODULE $(HZ_FLAGS)
+AFLAGS_MODULE   = -DMODULE $(HZ_FLAGS)
 LDFLAGS_MODULE  = --strip-debug
-CFLAGS_KERNEL	= $(ABYSS_FLAGS)
-AFLAGS_KERNEL	= $(ABYSS_FLAGS)
+CFLAGS_KERNEL	= $(HZ_FLAGS)
+AFLAGS_KERNEL	= $(HZ_FLAGS)
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
 # Use USERINCLUDE when you must reference the UAPI directories only.
@@ -395,7 +396,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
 		   -std=gnu89 \
-                   $(ABYSS_FLAGS)
+                   $(HZ_FLAGS)
 
 # Thanks gcc!
 KBUILD_CFLAGS   += -Wno-trigraphs -Wno-unused-label -Wno-array-bounds -Wno-memset-transposed-args \
@@ -404,11 +405,11 @@ KBUILD_CFLAGS   += -Wno-trigraphs -Wno-unused-label -Wno-array-bounds -Wno-memse
                    -Wno-misleading-indentation -Wno-bool-compare -Wno-int-conversion \
                    -Wno-discarded-qualifiers -Wno-tautological-compare -Wno-incompatible-pointer-types
 
-KBUILD_AFLAGS_KERNEL := $(ABYSS_FLAGS)
-KBUILD_CFLAGS_KERNEL := $(ABYSS_FLAGS)
+KBUILD_AFLAGS_KERNEL := $(HZ_FLAGS)
+KBUILD_CFLAGS_KERNEL := $(HZ_FLAGS)
 KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_AFLAGS_MODULE  := -DMODULE $(ABYSS_FLAGS)
-KBUILD_CFLAGS_MODULE  := -DMODULE $(ABYSS_FLAGS)
+KBUILD_AFLAGS_MODULE  := -DMODULE $(HZ_FLAGS)
+KBUILD_CFLAGS_MODULE  := -DMODULE $(HZ_FLAGS)
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
