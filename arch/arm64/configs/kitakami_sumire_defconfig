@@ -716,6 +716,9 @@ CONFIG_KEXEC_HARDBOOT=y
 CONFIG_PROC_DEVICETREE=y 
 # The upper one is turned on by default
 
+# PowerSuspend
+CONFIG_POWERSUSPEND=y
+
 # Idler
 CONFIG_ADRENO_IDLER=y
 
