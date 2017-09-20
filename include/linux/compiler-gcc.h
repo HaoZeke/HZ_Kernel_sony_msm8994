@@ -121,9 +121,9 @@
 #endif
 
 #if GCC_VERSION < 30300
-# define __used         __attribute__((__unused__))
+# define __used			__attribute__((__unused__))
 #else
-# define __used         __attribute__((__used__))
+# define __used			__attribute__((__used__))
 #endif
 
 #ifdef CONFIG_GCOV_KERNEL
@@ -133,7 +133,7 @@
 #endif /* CONFIG_GCOV_KERNEL */
 
 #if GCC_VERSION >= 30400
-#define __must_check        __attribute__((warn_unused_result))
+#define __must_check		__attribute__((warn_unused_result))
 #endif
 
 #if GCC_VERSION >= 40000
@@ -145,9 +145,9 @@
 # endif
 #endif
 
-#define __used          __attribute__((__used__))
-#define __compiler_offsetof(a, b)                   \
-    __builtin_offsetof(a, b)
+#define __used			__attribute__((__used__))
+#define __compiler_offsetof(a, b)					\
+	__builtin_offsetof(a, b)
 
 #if GCC_VERSION >= 40100 && GCC_VERSION < 40600
 # define __compiletime_object_size(obj) __builtin_object_size(obj, 0)
@@ -168,7 +168,7 @@
  * a special section, but I don't see any sense in this right now in
  * the kernel context
  */
-#define __cold          __attribute__((__cold__))
+#define __cold			__attribute__((__cold__))
 
 #define __UNIQUE_ID(prefix) __PASTE(__PASTE(__UNIQUE_ID_, prefix), __COUNTER__)
 
