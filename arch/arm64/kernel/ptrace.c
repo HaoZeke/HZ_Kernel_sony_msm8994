@@ -64,6 +64,28 @@ void ptrace_disable(struct task_struct *child)
 	user_disable_single_step(child);
 }
 
+/*
+ * Handle hitting a breakpoint.
+ */
+static int ptrace_break(struct pt_regs *regs)
+{
+	siginfo_t info = {
+		.si_signo = SIGTRAP,
+		.si_errno = 0,
+		.si_code  = TRAP_BRKPT,
+		.si_addr  = (void __user *)instruction_pointer(regs),
+	};
+
+	force_sig_info(SIGTRAP, &info, current);
+	return 0;
+}
+
+static int arm64_break_trap(unsigned long addr, unsigned int esr,
+			    struct pt_regs *regs)
+{
+	return ptrace_break(regs);
+}
+
 #ifdef CONFIG_HAVE_HW_BREAKPOINT
 /*
  * Handle hitting a HW-breakpoint.
