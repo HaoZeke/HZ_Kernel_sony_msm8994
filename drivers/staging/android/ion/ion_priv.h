@@ -1,8 +1,8 @@
 /*
- * drivers/gpu/ion/ion_priv.h
+ * drivers/staging/android/ion/ion_priv.h
  *
  * Copyright (C) 2011 Google, Inc.
- * Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014,2017, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -382,7 +382,7 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
  * @low_count:		number of lowmem items in the pool
  * @high_items:		list of highmem items
  * @low_items:		list of lowmem items
- * @mutex:		lock protecting this struct and especially the count
+ * @lock:		lock protecting this struct and especially the count
  *			item list
  * @gfp_mask:		gfp_mask to use from alloc
  * @order:		order of pages in the pool
@@ -398,7 +398,7 @@ struct ion_page_pool {
 	int low_count;
 	struct list_head high_items;
 	struct list_head low_items;
-	struct mutex mutex;
+	spinlock_t lock;
 	gfp_t gfp_mask;
 	unsigned int order;
 	struct plist_node list;
@@ -430,7 +430,8 @@ int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
 void ion_pages_sync_for_device(struct device *dev, struct page *page,
 		size_t size, enum dma_data_direction dir);
 
-int ion_walk_heaps(struct ion_client *client, int heap_id, void *data,
+int ion_walk_heaps(struct ion_client *client, int heap_id,
+			enum ion_heap_type type, void *data,
 			int (*f)(struct ion_heap *heap, void *data));
 
 struct ion_handle *ion_handle_get_by_id(struct ion_client *client,

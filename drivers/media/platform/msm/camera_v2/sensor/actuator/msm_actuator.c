@@ -87,6 +87,11 @@ static void msm_actuator_parse_i2c_params(struct msm_actuator_ctrl_t *a_ctrl,
 	struct msm_camera_i2c_reg_array *i2c_tbl = a_ctrl->i2c_reg_tbl;
 	CDBG("Enter\n");
 	for (i = 0; i < size; i++) {
+		/* check that the index into i2c_tbl cannot grow larger that
+		the allocated size of i2c_tbl */
+		if ((a_ctrl->total_steps + 1) < (a_ctrl->i2c_tbl_index)) {
+			break;
+		}
 		if (write_arr[i].reg_write_type == MSM_ACTUATOR_WRITE_DAC) {
 			value = (next_lens_position <<
 				write_arr[i].data_shift) |
@@ -1478,7 +1483,6 @@ static long msm_actuator_subdev_do_ioctl(
 
 	switch (cmd) {
 	case VIDIOC_MSM_ACTUATOR_CFG32:
-		cmd = VIDIOC_MSM_ACTUATOR_CFG;
 		switch (u32->cfgtype) {
 		case CFG_SET_ACTUATOR_INFO:
 			actuator_data.cfgtype = u32->cfgtype;
@@ -1581,11 +1585,14 @@ static long msm_actuator_subdev_do_ioctl(
 		}
 	}
 
-	rc = msm_actuator_subdev_ioctl(sd, cmd, parg);
+	if (cmd == VIDIOC_MSM_ACTUATOR_CFG32)
+		rc = msm_actuator_subdev_ioctl(sd, VIDIOC_MSM_ACTUATOR_CFG, parg);
+	else
+		rc = msm_actuator_subdev_ioctl(sd, cmd, parg);
 
 	switch (cmd) {
 
-	case VIDIOC_MSM_ACTUATOR_CFG:
+	case VIDIOC_MSM_ACTUATOR_CFG32:
 
 		switch (u32->cfgtype) {
 

@@ -640,7 +640,9 @@ static int ipa_generate_rt_hw_tbl_v2(enum ipa_ip_type ip,
 	return 0;
 
 proc_err:
-	dma_free_coherent(ipa_ctx->pdev, mem->size, mem->base, mem->phys_base);
+	if (mem->size > 0)
+		dma_free_coherent(ipa_ctx->pdev, mem->size, mem->base,
+				mem->phys_base);
 base_err:
 	dma_free_coherent(ipa_ctx->pdev, head->size, head->base,
 			head->phys_base);
@@ -651,8 +653,8 @@ err:
 int __ipa_commit_rt_v2(enum ipa_ip_type ip)
 {
 	struct ipa_desc desc[2];
-	struct ipa_mem_buffer body;
-	struct ipa_mem_buffer head;
+	struct ipa_mem_buffer body = {0};
+	struct ipa_mem_buffer head = {0};
 	struct ipa_hw_imm_cmd_dma_shared_mem cmd1 = {0};
 	struct ipa_hw_imm_cmd_dma_shared_mem cmd2 = {0};
 	u16 avail;
@@ -791,12 +793,16 @@ int ipa_query_rt_index(struct ipa_ioc_get_rt_tbl_indx *in)
 		return -EINVAL;
 	}
 
+	mutex_lock(&ipa_ctx->lock);
 	/* check if this table exists */
 	entry = __ipa_find_rt_tbl(in->ip, in->name);
-	if (!entry)
+	if (!entry){
+		mutex_unlock(&ipa_ctx->lock);
 		return -EFAULT;
+	}
 
 	in->idx  = entry->idx;
+	mutex_unlock(&ipa_ctx->lock);
 	return 0;
 }
 
@@ -1289,6 +1295,10 @@ int ipa_get_rt_tbl(struct ipa_ioc_get_rt_tbl *lookup)
 	mutex_lock(&ipa_ctx->lock);
 	entry = __ipa_find_rt_tbl(lookup->ip, lookup->name);
 	if (entry && entry->cookie == IPA_COOKIE) {
+		if (entry->ref_cnt == ((u32)~0U)) {
+			IPAERR("fail: ref count crossed limit\n");
+			goto ret;
+		}
 		entry->ref_cnt++;
 		lookup->hdl = entry->id;
 
@@ -1298,6 +1308,8 @@ int ipa_get_rt_tbl(struct ipa_ioc_get_rt_tbl *lookup)
 
 		result = 0;
 	}
+
+ret:
 	mutex_unlock(&ipa_ctx->lock);
 
 	return result;
