@@ -660,7 +660,7 @@ CONFIG_STRICT_MEMORY_RWX=y
 # Additions #
 #############
 
-CONFIG_LOCALVERSION="-HZ_v4"
+CONFIG_LOCALVERSION="-HZ_v5"
 CONFIG_LOCALVERSION_AUTO=n
 
 # Disable unwanted things
